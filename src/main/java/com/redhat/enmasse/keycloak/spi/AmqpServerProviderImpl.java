@@ -33,10 +33,13 @@ public class AmqpServerProviderImpl implements AmqpServerProviderFactory
     }
 
     @Override
-    public void init(final Config.Scope scope)
+    public void init(final Config.Scope config)
     {
-        // TODO - get host/port from config
-        server = new AmqpServer("localhost", 5677, scope);
+        
+        Integer port = config.getInt("port", 5672);
+        String hostname = config.get("host", "localhost");
+
+        server = new AmqpServer(hostname, port, config);
         Vertx vertx = Vertx.vertx();
         vertx.deployVerticle(server, stringAsyncResult ->  {
         });
@@ -58,11 +61,6 @@ public class AmqpServerProviderImpl implements AmqpServerProviderFactory
     @Override
     public String getId()
     {
-        return "AmqpServerProviderImpl";
-    }
-
-    public static void main(String[] args)
-    {
-        new AmqpServerProviderImpl().init(null);
+        return "amqp-server";
     }
 }

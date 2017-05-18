@@ -19,77 +19,52 @@ package com.redhat.enmasse.keycloak.spi;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.proton.ProtonConnection;
-import io.vertx.proton.ProtonSender;
 import io.vertx.proton.ProtonServer;
-import io.vertx.proton.ProtonSession;
+import org.jboss.logging.Logger;
 import org.keycloak.Config;
 import org.keycloak.models.KeycloakSessionFactory;
-
-import org.apache.qpid.proton.amqp.messaging.Source;
-import org.apache.qpid.proton.amqp.messaging.Target;
 
 
 public class AmqpServer extends AbstractVerticle {
 
+    private static final Logger LOG = Logger.getLogger(AmqpServer.class);
+
     private final String hostname;
     private final int port;
+    private final Config.Scope config;
     private volatile ProtonServer server;
     private KeycloakSessionFactory keycloakSessionFactory;
 
-    public AmqpServer(String hostname, int port, final Config.Scope scope)
-    {
+    public AmqpServer(String hostname, int port, final Config.Scope config) {
         this.hostname = hostname;
         this.port = port;
+        this.config = config;
     }
 
     private void connectHandler(ProtonConnection connection) {
         connection.setContainer("keycloak-sasl");
         connection.openHandler(conn -> {
-            System.err.println("Connection opened");
         }).closeHandler(conn -> {
             connection.close();
             connection.disconnect();
-            System.err.println("Connection closed");
         }).disconnectHandler(protonConnection -> {
             connection.disconnect();
-            System.err.println("Disconnected");
         }).open();
 
-        connection.sessionOpenHandler(ProtonSession::open);
-        connection.senderOpenHandler(sender -> senderOpenHandler(connection, sender));
-    }
-
-    private void senderOpenHandler(ProtonConnection connection, ProtonSender sender) {
-        sender.setSource(sender.getRemoteSource());
-        Source source = (Source) sender.getRemoteSource();
-        Target target = (Target) sender.getTarget();
-        try {
-            sender.open();
-        } catch (Exception e) {
-            e.printStackTrace();
-            sender.close();
-        }
     }
 
     @Override
     public void start() {
         server = ProtonServer.create(vertx);
-        server.saslAuthenticatorFactory(() -> new SaslAuthenticator(keycloakSessionFactory));
+        server.saslAuthenticatorFactory(() -> new SaslAuthenticator(keycloakSessionFactory, config));
         server.connectHandler(this::connectHandler);
-        System.err.println("Starting server on "+hostname+":"+ port);
+        LOG.info("Starting server on "+hostname+":"+ port);
         server.listen(port, hostname, event -> {
-            if(event.succeeded())
+            if(event.failed())
             {
-                System.err.println("success!!!!");
+                LOG.error("Unable to listen for AMQP on "+hostname+":" + port, event.cause());
             }
-            else if(event.failed())
-            {
-                event.cause().printStackTrace();
-            }
-            else
-            {
-                System.err.println("??????!?!!?!?!?!");
-            }
+
         });
     }
 
@@ -100,7 +75,7 @@ public class AmqpServer extends AbstractVerticle {
         }
     }
 
-    public void setKeycloakSessionFactory(final KeycloakSessionFactory keycloakSessionFactory)
+    void setKeycloakSessionFactory(final KeycloakSessionFactory keycloakSessionFactory)
     {
         this.keycloakSessionFactory = keycloakSessionFactory;
     }

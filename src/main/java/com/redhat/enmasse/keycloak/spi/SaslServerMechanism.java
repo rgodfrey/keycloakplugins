@@ -17,11 +17,12 @@
 
 package com.redhat.enmasse.keycloak.spi;
 
+import org.keycloak.Config;
 import org.keycloak.models.KeycloakSession;
 
 public interface SaslServerMechanism {
     String getName();
-    Instance newInstance(KeycloakSession session, String hostname);
+    Instance newInstance(KeycloakSession session, String hostname, final Config.Scope config);
     interface Instance {
         byte[] processResponse(byte[] response) throws IllegalArgumentException;
         boolean isComplete();

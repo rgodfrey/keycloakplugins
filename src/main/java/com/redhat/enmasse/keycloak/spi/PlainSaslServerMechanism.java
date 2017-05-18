@@ -19,6 +19,7 @@ package com.redhat.enmasse.keycloak.spi;
 
 import java.nio.charset.StandardCharsets;
 
+import org.keycloak.Config;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserCredentialModel;
@@ -31,7 +32,9 @@ public class PlainSaslServerMechanism implements SaslServerMechanism {
     }
 
     @Override
-    public Instance newInstance(final KeycloakSession keycloakSession, final String hostname)
+    public Instance newInstance(final KeycloakSession keycloakSession,
+                                final String hostname,
+                                final Config.Scope config)
     {
         return new Instance()
         {

@@ -24,6 +24,7 @@ import io.vertx.core.Handler;
 import io.vertx.core.net.NetSocket;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.sasl.ProtonSaslAuthenticator;
+import org.keycloak.Config;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.KeycloakSessionFactory;
 
@@ -39,9 +40,14 @@ class SaslAuthenticator implements ProtonSaslAuthenticator
     static {
         final SaslServerMechanism plainSaslServerMechanism = new PlainSaslServerMechanism();
         final SaslServerMechanism scramSHA1SaslServerMechanism = new ScramSHA1SaslServerMechanism();
+        final SaslServerMechanism xoauth2SHA1SaslServerMechanism = new XOAUTH2SaslServerMechanism();
+
         MECHANISMS.put(plainSaslServerMechanism.getName(), plainSaslServerMechanism);
         MECHANISMS.put(scramSHA1SaslServerMechanism.getName(), scramSHA1SaslServerMechanism);
+        MECHANISMS.put(xoauth2SHA1SaslServerMechanism.getName(), scramSHA1SaslServerMechanism);
     }
+
+    private final Config.Scope config;
 
     private KeycloakSessionFactory keycloakSessionFactory;
     private Sasl sasl;
@@ -49,8 +55,9 @@ class SaslAuthenticator implements ProtonSaslAuthenticator
     private KeycloakSession keycloakSession;
     private SaslServerMechanism.Instance saslMechanism;
 
-    SaslAuthenticator(final KeycloakSessionFactory sessionFactory) {
+    SaslAuthenticator(final KeycloakSessionFactory sessionFactory, final Config.Scope config) {
         this.keycloakSessionFactory = sessionFactory;
+        this.config = config;
     }
 
     @Override
@@ -71,12 +78,15 @@ class SaslAuthenticator implements ProtonSaslAuthenticator
         boolean done = false;
 
         if(saslMechanism == null) {
-            if (remoteMechanisms.length > 0)
-            {
+            if (remoteMechanisms.length > 0) {
                 String chosen = remoteMechanisms[0];
                 SaslServerMechanism mechanismImpl = MECHANISMS.get(chosen);
                 if (mechanismImpl != null) {
-                    saslMechanism = mechanismImpl.newInstance(keycloakSession, sasl.getHostname());
+                    String saslHostname = sasl.getHostname();
+                    if(saslHostname == null) {
+                        saslHostname = config.get("defaultDomain","");
+                    }
+                    saslMechanism = mechanismImpl.newInstance(keycloakSession, saslHostname, config);
 
                 } else {
 
@@ -85,22 +95,35 @@ class SaslAuthenticator implements ProtonSaslAuthenticator
                 }
             }
         }
-        if(sasl.pending()>0) {
-            byte[] response = new byte[sasl.pending()];
-            sasl.recv(response, 0, response.length);
+        if(!done && saslMechanism != null) {
+            byte[] response;
+            if(sasl.pending()>0) {
+                response = new byte[sasl.pending()];
+                sasl.recv(response, 0, response.length);
+            } else {
+                response = new byte[0];
+            }
             try {
                 byte[] challenge = saslMechanism.processResponse(response);
-                if (saslMechanism.isComplete()) {
-                    succeeded = saslMechanism.isAuthenticated();
-                    if (succeeded) {
-                        sasl.done(Sasl.SaslOutcome.PN_SASL_OK);
-                    } else {
-                        sasl.done(Sasl.SaslOutcome.PN_SASL_AUTH);
-                    }
-                } else {
+                if (!saslMechanism.isComplete() || (challenge != null && challenge.length > 0))
+                {
                     sasl.send(challenge, 0, challenge.length);
                 }
-            } catch (IllegalArgumentException e) {
+                else
+                {
+                    succeeded = saslMechanism.isAuthenticated();
+                    if (succeeded)
+                    {
+                        sasl.done(Sasl.SaslOutcome.PN_SASL_OK);
+                    }
+                    else
+                    {
+                        sasl.done(Sasl.SaslOutcome.PN_SASL_AUTH);
+                    }
+                }
+            }
+            catch (IllegalArgumentException e)
+            {
                 e.printStackTrace();
                 done = true;
                 sasl.done(Sasl.SaslOutcome.PN_SASL_SYS);

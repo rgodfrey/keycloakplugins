@@ -246,6 +246,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-deploy-plugin</artifactId>
+                <version>2.8.2</version>
                 <configuration>
                     <skip>true</skip>
                 </configuration>
@@ -261,6 +262,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.6.1</version>
                 <configuration>
                     <source>${maven.compiler.source}</source>
                     <target>${maven.compiler.target}</target>
@@ -269,6 +271,7 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
+                <version>1.6.0</version>
                 <configuration>
                     <workingDirectory>${project.basedir}</workingDirectory>
                 </configuration>
@@ -276,9 +279,38 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
+                <version>2.10.4</version>
                 <configuration>
                     <skip>true</skip>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.0.0</version>
+                <configuration>
+                    <artifactSet>
+                        <excludes>
+                            <exclude>io.netty:netty-handler</exclude>
+                            <exclude>io.netty:netty-codec</exclude>
+                            <exclude>io.netty:netty-handler-proxy</exclude>
+                            <exclude>io.netty:netty-codec-socks</exclude>
+                            <exclude>io.netty:netty-codec-http</exclude>
+                            <exclude>io.netty:netty-codec-http2</exclude>
+                        <!--    <exclude>io.netty:netty-resolver</exclude> -->
+                            <exclude>io.netty:netty-resolver-dns</exclude>
+                            <exclude>io.netty:netty-codec-dns</exclude>
+                        </excludes>
+                    </artifactSet>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
