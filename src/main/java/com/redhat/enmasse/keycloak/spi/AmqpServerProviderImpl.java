@@ -35,15 +35,22 @@ public class AmqpServerProviderImpl implements AmqpServerProviderFactory
     @Override
     public void init(final Config.Scope config)
     {
-        
-        Integer port = config.getInt("port", 5672);
-        String hostname = config.get("host", "localhost");
 
-        server = new AmqpServer(hostname, port, config);
         Vertx vertx = Vertx.vertx();
-        vertx.deployVerticle(server, stringAsyncResult ->  {
-        });
+        if(config.getBoolean("enableNonTls", true)) {
+            Integer port = config.getInt("port", 5672);
+            String hostname = config.get("host", "localhost");
 
+            server = new AmqpServer(hostname, port, config, false);
+            vertx.deployVerticle(server);
+        }
+        if(config.getBoolean("enableTls", true)) {
+            Integer port = config.getInt("tlsPort", 5671);
+            String hostname = config.get("tlsHost", "0.0.0.0");
+
+            server = new AmqpServer(hostname, port, config, true);
+            vertx.deployVerticle(server);
+        }
     }
 
     @Override

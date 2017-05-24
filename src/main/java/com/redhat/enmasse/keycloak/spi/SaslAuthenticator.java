@@ -55,7 +55,7 @@ class SaslAuthenticator implements ProtonSaslAuthenticator
     private KeycloakSession keycloakSession;
     private SaslServerMechanism.Instance saslMechanism;
 
-    SaslAuthenticator(final KeycloakSessionFactory sessionFactory, final Config.Scope config) {
+    SaslAuthenticator(final KeycloakSessionFactory sessionFactory, final Config.Scope config, final boolean secure) {
         this.keycloakSessionFactory = sessionFactory;
         this.config = config;
     }

@@ -291,13 +291,11 @@
                 <configuration>
                     <artifactSet>
                         <excludes>
-                            <exclude>io.netty:netty-handler</exclude>
                             <exclude>io.netty:netty-codec</exclude>
                             <exclude>io.netty:netty-handler-proxy</exclude>
                             <exclude>io.netty:netty-codec-socks</exclude>
                             <exclude>io.netty:netty-codec-http</exclude>
                             <exclude>io.netty:netty-codec-http2</exclude>
-                        <!--    <exclude>io.netty:netty-resolver</exclude> -->
                             <exclude>io.netty:netty-resolver-dns</exclude>
                             <exclude>io.netty:netty-codec-dns</exclude>
                         </excludes>
