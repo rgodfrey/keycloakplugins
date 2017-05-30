@@ -64,7 +64,6 @@ public class AmqpServerProviderImpl implements AmqpServerProviderFactory {
     @Override
     public void postInit(final KeycloakSessionFactory keycloakSessionFactory) {
         Vertx vertx = Vertx.vertx();
-        tlsServer.setKeycloakSessionFactory(keycloakSessionFactory);
         if(server != null) {
             server.setKeycloakSessionFactory(keycloakSessionFactory);
             try {
