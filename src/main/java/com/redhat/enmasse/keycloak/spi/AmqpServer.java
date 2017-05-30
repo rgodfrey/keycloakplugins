@@ -51,6 +51,7 @@ public class AmqpServer extends AbstractVerticle {
         String containerId = config.get("containerId", "keycloak-amqp");
         connection.setContainer(containerId);
         connection.openHandler(conn -> {
+            connection.open();
             connection.close();
             connection.disconnect();
         }).closeHandler(conn -> {

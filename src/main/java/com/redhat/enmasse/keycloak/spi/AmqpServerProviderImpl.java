@@ -18,13 +18,18 @@
 package com.redhat.enmasse.keycloak.spi;
 
 import io.vertx.core.Vertx;
+import org.jboss.logging.Logger;
 import org.keycloak.Config;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.KeycloakSessionFactory;
 
-public class AmqpServerProviderImpl implements AmqpServerProviderFactory
-{
+public class AmqpServerProviderImpl implements AmqpServerProviderFactory {
+
+    private static final Logger LOG = Logger.getLogger(AmqpServerProviderImpl.class);
+
     private AmqpServer server;
+    private AmqpServer tlsServer;
+
 
     @Override
     public AmqpServerProviderFactory create(final KeycloakSession keycloakSession)
@@ -33,41 +38,64 @@ public class AmqpServerProviderImpl implements AmqpServerProviderFactory
     }
 
     @Override
-    public void init(final Config.Scope config)
-    {
+    public void init(final Config.Scope config) {
 
-        Vertx vertx = Vertx.vertx();
         if(config.getBoolean("enableNonTls", true)) {
             Integer port = config.getInt("port", 5672);
             String hostname = config.get("host", "localhost");
 
-            server = new AmqpServer(hostname, port, config, false);
-            vertx.deployVerticle(server);
+            try {
+                server = new AmqpServer(hostname, port, config, false);
+            } catch (RuntimeException e) {
+                LOG.error("Unable to create AMQP Server using non-TLS", e);
+            }
         }
         if(config.getBoolean("enableTls", true)) {
             Integer port = config.getInt("tlsPort", 5671);
             String hostname = config.get("tlsHost", "0.0.0.0");
-
-            server = new AmqpServer(hostname, port, config, true);
-            vertx.deployVerticle(server);
+            try {
+                tlsServer = new AmqpServer(hostname, port, config, true);
+            } catch (RuntimeException e) {
+                LOG.error("Unable to create AMQP Server using TLS", e);
+            }
         }
     }
 
     @Override
-    public void postInit(final KeycloakSessionFactory keycloakSessionFactory)
-    {
-        server.setKeycloakSessionFactory(keycloakSessionFactory);
+    public void postInit(final KeycloakSessionFactory keycloakSessionFactory) {
+        Vertx vertx = Vertx.vertx();
+        tlsServer.setKeycloakSessionFactory(keycloakSessionFactory);
+        if(server != null) {
+            server.setKeycloakSessionFactory(keycloakSessionFactory);
+            try {
+                vertx.deployVerticle(server);
+            } catch (RuntimeException e) {
+                LOG.error("Unable to start AMQP Server using non-TLS", e);
+            }
+        }
+
+        if(tlsServer != null) {
+            tlsServer.setKeycloakSessionFactory(keycloakSessionFactory);
+            try {
+                vertx.deployVerticle(tlsServer);
+            } catch (RuntimeException e) {
+                LOG.error("Unable to start AMQP Server using TLS", e);
+            }
+        }
     }
 
     @Override
-    public void close()
-    {
-        server.stop();
+    public void close() {
+        if(server != null) {
+            server.stop();
+        }
+        if(tlsServer != null) {
+            tlsServer.stop();
+        }
     }
 
     @Override
-    public String getId()
-    {
+    public String getId() {
         return "amqp-server";
     }
 }
