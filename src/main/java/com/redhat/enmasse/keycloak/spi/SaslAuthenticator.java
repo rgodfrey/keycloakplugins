@@ -112,6 +112,7 @@ class SaslAuthenticator implements ProtonSaslAuthenticator
                 else
                 {
                     succeeded = saslMechanism.isAuthenticated();
+                    done = true;
                     if (succeeded)
                     {
                         sasl.done(Sasl.SaslOutcome.PN_SASL_OK);

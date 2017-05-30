@@ -53,7 +53,6 @@ public class AmqpServer extends AbstractVerticle {
         connection.openHandler(conn -> {
             connection.open();
             connection.close();
-            connection.disconnect();
         }).closeHandler(conn -> {
             connection.close();
             connection.disconnect();
